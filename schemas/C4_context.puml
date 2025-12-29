@@ -1,0 +1,19 @@
+@startuml
+!NEW_C4_STYLE=1
+!include  https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+title Warmhouse Context Diagram
+
+top to bottom direction
+
+
+Person(user, "User", "A user of the WarmHouse system", person)
+System(warmHouseSystem, "Warmhouse System", "System managing sensors and heating devices")
+
+System_Ext(sensor, "Sensor", "Temperature sensors in client's house")
+
+Rel(user, warmHouseSystem, "Uses the system")
+Rel(warmHouseSystem, sensor, "Fetches sensor readings, issues commands")
+
+SHOW_LEGEND()
+@enduml
