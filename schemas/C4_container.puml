@@ -1,0 +1,132 @@
+@startuml
+!NEW_C4_STYLE=1
+
+!include  https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+SHOW_PERSON_OUTLINE()
+title Warmhouse Container Diagram
+
+top to bottom direction
+
+together {
+    Person(user, "User", "A user of the WarmHouse system")
+    Person(support, "Support", "WarmHouse employee")
+    System_Ext(helpdesk, "HelpDesk", "External HelpDesk Solution")
+}
+
+together {
+    System_Ext(httpsDevice, "HTTPS Device", "Smart home device with HTTPS communication")
+    System_Ext(mqttDevice, "MQTT Device", "Smart home device with MQTT communication")
+}
+
+System_Boundary(warmHouseSystem, "WarmHouse System") {
+    Container(customerGateway, "Customer Gateway", , "End user request gateway with auth check")
+    Container(helpdeskAdapter, "HelpDesk Adapter", , "HelpDesk Adapter",)
+    Container(userDeviceService, "User Device Service", , "End user interface with access check")
+
+    Container_Boundary(auth_domain, "Auth Domain") {
+        Container(authService, "Auth Service", , "User profile management and authentication")
+        ContainerDb(authServiceDb, "Auth Database",  "SQL Database", "Stores user credentials and profile", "")
+    }
+    Container_Boundary(device_access_domain, "Access Control Domain") {
+        Container(deviceAccessService, "Device Access Service", ,"Enforces device access control and manages Access Control Lists", "")
+        ContainerDb(deviceAccessDb, "Device Access Database",  "SQL Database", "Stores device Access Control List", "")
+    }
+
+    Container_Boundary(device_core_domain, "Device Core Domain") {
+        Container(deviceService, "Device Service", ,"Stores and allows to control device metadata and configuration", "")
+        ContainerDb(deviceDb, "Device Database",  "SQL Database", "Stores device metadata, configuration", "")
+    }
+
+    Container_Boundary(device_communication_domain, "Device Communication Domain") {
+        ContainerQueue(deviceMqttBroker, "Device MQTT Broker", "MQTT Broker", "Device communication broker")
+        Container(deviceHttpsServer, "Device HTTPS Server", "HTTPS server", "Device communication server")
+        ContainerQueue(deviceIngressTopic, "Device Ingress Topic", "Kafka", "Device messages fan-out topic")
+        Container(deviceCommandRouter, "Device Command Router", "", "Routes communication to devices")
+        Container(deviceConnectionService, "Device Connection Service",, "Selects connection details info from messages, CRUD device connection details", "")
+        ContainerDb(deviceConnectionDb, "Device Connection Database",  "SQL Database", "Stores device connection details", "")
+      }
+
+    Container_Boundary(device_configuration_domain, "Device Configuration Domain") {
+        Container(configurationProcessor, "Configuration Processor","", "Selects and processes configuration from devices (Anti-Corruption Layer)", "")
+        ContainerQueue(transformedConfigurationTopic, "Processed Configuration Topic", "Kafka",)
+    }
+
+    Container_Boundary(device_readings_domain, "Device Readings Domain") {
+        Container(readingsProcessor, "Readings Processor","", "Selects and processes readings from devices (Anti-Corruption Layer)", "")
+        ContainerQueue(transformedReadingsTopic, "Processed Readings Topic", "Kafka",)
+        Container(lastReadingService, "Last Reading Service", , "CRUD Last readings of devices")
+        ContainerDb(readingsDb, "Readings Database", "SQL Database", "Stores last readings of devices in internal format")
+    }
+
+    Container_Boundary(automation_domain, "Automation Domain") {
+        Container(automationRuleEngineService, "Automation Rule Engine Service",, "Executes automation rules", "")
+        ContainerQueue(automationRuleUpdateTopic, "Automation Rule Update Topic", "Kafka", "")
+        Container(automationRuleManagerService, "Automation Rule Manager Service",, "Verifies automation rules requests, stores event sourced rules and projection", "")
+        ContainerDb(automationRuleDb, "Automation Rule Database",  "SQL Database", "Stores automation rule domain events and projection", "")
+    }
+}
+
+' Device access domain
+Rel(deviceAccessService, deviceService, "Reads unclaimed devices", "sync")
+Rel(deviceAccessService, deviceAccessDb, "", )
+
+' Auth Domain
+Rel(authService, authServiceDb, "", )
+
+' Device Core Domain
+Rel(deviceService, deviceDb, "Read/Write device configuration/metadata")
+Rel(deviceService, deviceCommandRouter, "Sends commands to the devices", "sync")
+Rel(transformedConfigurationTopic, deviceService, "")
+
+' Device Communication Domain
+Rel(httpsDevice, deviceHttpsServer, "Sends readings and current configuration", "sync, HTTPS")
+Rel(deviceHttpsServer, httpsDevice, "Sends commands", "sync, HTTPS")
+Rel(deviceCommandRouter, deviceHttpsServer, "Sends commands to the devices", "sync")
+Rel(deviceHttpsServer, deviceIngressTopic, "")
+Rel(deviceMqttBroker, mqttDevice, "Sends commands", "async, MQTT")
+Rel(mqttDevice, deviceMqttBroker, "Sends readings and current configuration", "sync, MQTT")
+Rel(deviceCommandRouter, deviceMqttBroker, "Sends commands to the devices")
+Rel(deviceMqttBroker, deviceIngressTopic, "", "async")
+
+' Device Configuration Domain
+Rel(deviceIngressTopic, configurationProcessor, "", "async")
+Rel(configurationProcessor, transformedConfigurationTopic, "Sends processed configuration to consumers")
+
+' Device Readings Domain
+Rel(deviceIngressTopic, readingsProcessor, "", "async")
+Rel(readingsProcessor, transformedReadingsTopic, "Sends processed readings to consumers")
+Rel(transformedReadingsTopic, lastReadingService, "")
+Rel(lastReadingService, readingsDb, "Read/Write last readings")
+
+' Device connection use case
+Rel(deviceIngressTopic, deviceConnectionService, "", "async")
+Rel(deviceCommandRouter, deviceConnectionService, "Get device connection details", "sync")
+Rel(deviceConnectionService, deviceConnectionDb, "Read/Write connection details")
+
+' Automation domain
+Rel(automationRuleManagerService, automationRuleDb, "Read/Write domain events and projection")
+Rel(automationRuleManagerService, automationRuleUpdateTopic, "Pushes rule updates")
+Rel(transformedReadingsTopic, automationRuleEngineService, "", "async")
+Rel(automationRuleUpdateTopic, automationRuleEngineService, "", "async")
+Rel(automationRuleEngineService, deviceService, "Executes rules via sending commands")
+
+' Support use cases
+Rel(support, helpdesk, "Works with support tickets", "sync")
+
+' Customer use cases
+Rel(user, customerGateway, "Sends requests via public API", "sync, HTTPS")
+Rel(customerGateway, authService, "Authenticates user and get access token", "sync")
+Rel(customerGateway, userDeviceService, "Execute user requests", "sync")
+Rel(userDeviceService, deviceAccessService, "Assigns device to user and verifies user access to device", "sync")
+Rel(userDeviceService, deviceService, "Manages device configuration", "sync")
+Rel(userDeviceService, lastReadingService, "Reads last received device readings", "sync")
+Rel(userDeviceService, automationRuleManagerService, "Manages automation rules", "sync")
+Rel(customerGateway, helpdeskAdapter, "Sends user ticket to HelpDesk via adapter", "sync")
+Rel(helpdeskAdapter, helpdesk, "Registers user ticket with HelpDesk system", "sync")
+
+
+Lay_L(user, support)
+Lay_R(customerGateway, auth_domain)
+Lay_D(device_core_domain, userDeviceService)
+SHOW_LEGEND()
+@enduml
