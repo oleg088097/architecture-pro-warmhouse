@@ -7,6 +7,8 @@ title Warmhouse Container Diagram
 
 top to bottom direction
 
+AddRelTag("async", $lineStyle = DashedLine())
+
 together {
     Person(user, "User", "A user of the WarmHouse system")
     Person(support, "Support", "WarmHouse employee")
@@ -48,26 +50,26 @@ System_Boundary(warmHouseSystem, "WarmHouse System") {
 
     Container_Boundary(device_configuration_domain, "Device Configuration Domain") {
         Container(configurationProcessor, "Configuration Processor","", "Selects and processes configuration from devices (Anti-Corruption Layer)", "")
-        ContainerQueue(transformedConfigurationTopic, "Processed Configuration Topic", "Kafka",)
+        ' ContainerQueue(transformedConfigurationTopic, "Processed Configuration Topic", "Kafka",)
     }
 
     Container_Boundary(device_readings_domain, "Device Readings Domain") {
         Container(readingsProcessor, "Readings Processor","", "Selects and processes readings from devices (Anti-Corruption Layer)", "")
-        ContainerQueue(transformedReadingsTopic, "Processed Readings Topic", "Kafka",)
+        ContainerQueue(processedReadingsTopic, "Processed Readings Topic", "Kafka",)
         Container(lastReadingService, "Last Reading Service", , "CRUD Last readings of devices")
         ContainerDb(readingsDb, "Readings Database", "SQL Database", "Stores last readings of devices in internal format")
     }
 
     Container_Boundary(automation_domain, "Automation Domain") {
         Container(automationRuleEngineService, "Automation Rule Engine Service",, "Executes automation rules", "")
-        ContainerQueue(automationRuleUpdateTopic, "Automation Rule Update Topic", "Kafka", "")
+        ' ContainerQueue(automationRuleUpdateTopic, "Automation Rule Update Topic", "Kafka", "")
         Container(automationRuleManagerService, "Automation Rule Manager Service",, "Verifies automation rules requests, stores event sourced rules and projection", "")
         ContainerDb(automationRuleDb, "Automation Rule Database",  "SQL Database", "Stores automation rule domain events and projection", "")
     }
 }
 
 ' Device access domain
-Rel(deviceAccessService, deviceService, "Reads unclaimed devices", "sync")
+Rel(deviceAccessService, deviceService, "Reads unclaimed devices")
 Rel(deviceAccessService, deviceAccessDb, "", )
 
 ' Auth Domain
@@ -75,54 +77,56 @@ Rel(authService, authServiceDb, "", )
 
 ' Device Core Domain
 Rel(deviceService, deviceDb, "Read/Write device configuration/metadata")
-Rel(deviceService, deviceCommandRouter, "Sends commands to the devices", "sync")
-Rel(transformedConfigurationTopic, deviceService, "")
+Rel(deviceService, deviceCommandRouter, "Sends commands to the devices")
+Rel(configurationProcessor, deviceService, "Reads processed configuration", "Kafka topic", $tags="async")
+' Rel(transformedConfigurationTopic, deviceService, "")
 
 ' Device Communication Domain
-Rel(httpsDevice, deviceHttpsServer, "Sends readings and current configuration", "sync, HTTPS")
-Rel(deviceHttpsServer, httpsDevice, "Sends commands", "sync, HTTPS")
-Rel(deviceCommandRouter, deviceHttpsServer, "Sends commands to the devices", "sync")
+Rel(httpsDevice, deviceHttpsServer, "Sends readings and current configuration", "HTTPS")
+Rel(deviceHttpsServer, httpsDevice, "Sends commands", "HTTPS")
+Rel(deviceCommandRouter, deviceHttpsServer, "Sends commands to the devices")
 Rel(deviceHttpsServer, deviceIngressTopic, "")
-Rel(deviceMqttBroker, mqttDevice, "Sends commands", "async, MQTT")
-Rel(mqttDevice, deviceMqttBroker, "Sends readings and current configuration", "sync, MQTT")
+Rel(deviceMqttBroker, mqttDevice, "Sends commands", "MQTT", $tags="async")
+Rel(mqttDevice, deviceMqttBroker, "Sends readings and current configuration", "MQTT")
 Rel(deviceCommandRouter, deviceMqttBroker, "Sends commands to the devices")
-Rel(deviceMqttBroker, deviceIngressTopic, "", "async")
+Rel(deviceMqttBroker, deviceIngressTopic, "", "", $tags="async")
 
 ' Device Configuration Domain
-Rel(deviceIngressTopic, configurationProcessor, "", "async")
-Rel(configurationProcessor, transformedConfigurationTopic, "Sends processed configuration to consumers")
+Rel(deviceIngressTopic, configurationProcessor, "", "", $tags="async")
+' Rel(configurationProcessor, transformedConfigurationTopic, "Sends processed configuration to consumers")
 
 ' Device Readings Domain
-Rel(deviceIngressTopic, readingsProcessor, "", "async")
-Rel(readingsProcessor, transformedReadingsTopic, "Sends processed readings to consumers")
-Rel(transformedReadingsTopic, lastReadingService, "")
+Rel(deviceIngressTopic, readingsProcessor, "", "", $tags="async")
+Rel(readingsProcessor, processedReadingsTopic, "Sends processed readings to consumers")
+Rel(processedReadingsTopic, lastReadingService, "", $tags="async")
 Rel(lastReadingService, readingsDb, "Read/Write last readings")
 
 ' Device connection use case
-Rel(deviceIngressTopic, deviceConnectionService, "", "async")
-Rel(deviceCommandRouter, deviceConnectionService, "Get device connection details", "sync")
+Rel(deviceIngressTopic, deviceConnectionService, "", "", $tags="async")
+Rel(deviceCommandRouter, deviceConnectionService, "Get device connection details")
 Rel(deviceConnectionService, deviceConnectionDb, "Read/Write connection details")
 
 ' Automation domain
 Rel(automationRuleManagerService, automationRuleDb, "Read/Write domain events and projection")
-Rel(automationRuleManagerService, automationRuleUpdateTopic, "Pushes rule updates")
-Rel(transformedReadingsTopic, automationRuleEngineService, "", "async")
-Rel(automationRuleUpdateTopic, automationRuleEngineService, "", "async")
+' Rel(automationRuleManagerService, automationRuleUpdateTopic, "Pushes rule updates")
+Rel(processedReadingsTopic, automationRuleEngineService, "", "", $tags="async")
+' Rel(automationRuleUpdateTopic, automationRuleEngineService, "", "", $tags="async")
+Rel(automationRuleManagerService, automationRuleEngineService, "", "Kafka topic", $tags="async")
 Rel(automationRuleEngineService, deviceService, "Executes rules via sending commands")
 
 ' Support use cases
-Rel(support, helpdesk, "Works with support tickets", "sync")
+Rel(support, helpdesk, "Works with support tickets")
 
 ' Customer use cases
-Rel(user, customerGateway, "Sends requests via public API", "sync, HTTPS")
-Rel(customerGateway, authService, "Authenticates user and get access token", "sync")
-Rel(customerGateway, userDeviceService, "Execute user requests", "sync")
-Rel(userDeviceService, deviceAccessService, "Assigns device to user and verifies user access to device", "sync")
-Rel(userDeviceService, deviceService, "Manages device configuration", "sync")
-Rel(userDeviceService, lastReadingService, "Reads last received device readings", "sync")
-Rel(userDeviceService, automationRuleManagerService, "Manages automation rules", "sync")
-Rel(customerGateway, helpdeskAdapter, "Sends user ticket to HelpDesk via adapter", "sync")
-Rel(helpdeskAdapter, helpdesk, "Registers user ticket with HelpDesk system", "sync")
+Rel(user, customerGateway, "Sends requests via public API", "HTTPS")
+Rel(customerGateway, authService, "Authenticates user and get access token")
+Rel(customerGateway, userDeviceService, "Execute user requests")
+Rel(userDeviceService, deviceAccessService, "Assigns device to user and verifies user access to device")
+Rel(userDeviceService, deviceService, "Manages device configuration")
+Rel(userDeviceService, lastReadingService, "Reads last received device readings")
+Rel(userDeviceService, automationRuleManagerService, "Manages automation rules")
+Rel(customerGateway, helpdeskAdapter, "Sends user ticket to HelpDesk via adapter")
+Rel(helpdeskAdapter, helpdesk, "Registers user ticket with HelpDesk system")
 
 
 Lay_L(user, support)
