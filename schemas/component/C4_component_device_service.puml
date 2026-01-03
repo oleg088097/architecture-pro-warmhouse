@@ -1,0 +1,65 @@
+@startuml
+!NEW_C4_STYLE=1
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Device Service Component Diagram
+top to bottom direction
+
+AddRelTag("async", $textColor="$ARROW_FONT_COLOR", $lineColor="$ARROW_COLOR", $lineStyle = DashedLine())
+
+System_Boundary(warmHouseSystem, "WarmHouse System") {
+    Container_Boundary(deviceService, "Device Service") {
+        together {
+            Component(metadataManagerApi, "Metadata Manager API", ,"Allows to read/write device metadata", "")
+            Component(configurationReadApi, "Configuration Read API", ,"Allows to read device configuration", "")
+            Component(configurationUpdateApi, "Configuration Update API", ,"Allows to send updates for device configuration", "")
+            Component(configurationTopicSubscriber, "Configuration Topic Subscriber", ,"Reads Configuration Topic to process updates from device", "")
+        }
+
+        Component(metadataComponent, "Metadata Component", ,"Provides functionality to read/update metadata", "")
+        Component(configurationComponent, "Configuration Component", ,"Provides functionality to read/write configuration via repository", "")
+        Component(configurationOutboxComponent, "Configuration Outbox Component", ,"Provides functionality to deliver update commands to router", "")
+        ' Component(configurationQueueComponent, "Configuration Queue Component", ,"Writes configuration update commands to queue", "")
+        ' Component(configurationSenderComponent, "Configuration Sender Component", ,"Sends updated configuration to command router", "")
+
+        Component(configurationRepository, "Configuration Repository", ,"Repository class for Configuration objects", "")
+        ' Component(configurationOutboxRepository, "Configuration Outbox Repository", ,"Repository class for Configuration Queue objects", "")
+        Component(metadataRepository, "Metadata Repository", ,"Repository class for Metadata objects", "")
+    }
+    Container(deviceAccessService, "Device Access Service", ,"Enforces device access control and manages Access Control Lists", "")
+    Container(configurationProcessor, "Configuration Processor","", "Selects and processes configuration from devices (Anti-Corruption Layer)", "")
+    Container(automationRuleEngineService, "Automation Rule Engine Service",, "Executes automation rules", "")
+    Container(userDeviceService, "User Device Service", , "End user interface with access check")
+    Container(deviceCommandRouter, "Device Command Router", "", "Routes communication to devices")
+    ContainerDb(deviceDb, "Device Database",  "SQL Database", "Stores Device domain objects", "")
+}
+Rel(automationRuleEngineService, configurationUpdateApi, "Sends configuration update commands from automation")
+
+Rel(userDeviceService, configurationReadApi, "Reads configuration")
+Rel(userDeviceService, configurationUpdateApi, "Sends configuration update commands from user")
+Rel(configurationReadApi, configurationComponent, "Read configuration")
+Rel(configurationProcessor, configurationTopicSubscriber, "", "Kafka topic", $tags="async")
+Rel(configurationTopicSubscriber, configurationComponent, "Write configuration")
+Rel(configurationComponent, configurationRepository, "")
+Rel(configurationUpdateApi, configurationOutboxComponent, "Send configuration updates via outbox")
+Rel(configurationOutboxComponent, deviceCommandRouter, "Send configuration to device")
+' Rel(configurationManagerApi, configurationQueueComponent, "Write configuration update command")
+' Rel(configurationQueueComponent, configurationOutboxRepository, "Create configuration update command")
+' Rel(configurationOutboxRepository, configurationSenderComponent, "Read/update command in configuration outbox")
+' Rel(configurationSenderComponent, deviceCommandRouter, "Send configuration to device")
+
+Rel(deviceAccessService, metadataManagerApi, "Verifies device exists")
+Rel(userDeviceService, metadataManagerApi, "")
+Rel(metadataManagerApi, metadataComponent, "")
+Rel(metadataComponent, metadataRepository, "")
+
+' Rel(configurationOutboxRepository, deviceDb, "")
+Rel(configurationRepository, deviceDb, "")
+Rel(metadataRepository, deviceDb, "")
+
+' database needs to have metadata table device_id - metadata?
+' database needs to have configuration table config_id - device_id - config
+' database needs to have config_outbox table command_id - device_id - config - start_time - attempt_count - status (PENDING/SENT/FAILED)
+
+SHOW_LEGEND()
+@enduml
