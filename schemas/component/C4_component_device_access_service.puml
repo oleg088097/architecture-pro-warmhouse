@@ -2,16 +2,15 @@
 !NEW_C4_STYLE=1
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
 
-title DeviceAccessService Component Diagram
+title Device Access Service Component Diagram
 top to bottom direction
 
 System_Boundary(warmHouseSystem, "WarmHouse System") {
-    Container_Boundary(DeviceAccessService, "DeviceAccessService Component") {
+    Container_Boundary(deviceAccessService, "Device Access Service") {
         together {
             Component(userAccessCheckApi, "User Access Check API", ,"Allows to check whether user has access to device", "")
             Component(userAccessListApi, "User Access List API", ,"Allows to get list of available devices for user", "")
-            Component(deviceAccessListApi, "Device Access List API", ,"Allows to get list of users with access to device", "")
-            Component(deviceAccessManagementApi, "Device Access Management API", ,"Allows to define users with access to device", "")
+            Component(deviceAccessManagementApi, "Device Access Management API", ,"Allows to read/write list of users with access to device", "")
             Component(deviceClaimApi, "Device Claim API", ,"Allows to claim an unclaimed device to initiate access", "")
         }
 
@@ -20,7 +19,7 @@ System_Boundary(warmHouseSystem, "WarmHouse System") {
         Component(deviceClaimComponent, "Device Claim Component", ,"Provides functionality to claim unclaimed device", "")
 
         Component(deviceAccessRepository, "Device Access Repository", ,"Repository class for Device Access domain objects", "")
-        Component(deviceServiceComponent, "Device Service Component", ,"API Client for Device Service", "")
+        Component(deviceServiceComponent, "Device Service Component", ,"API Client", "")
     }
     Container(userDeviceService, "User Device Service", , "End user interface with access check")
     Container(deviceService, "Device Service", ,"Stores and allows to control device metadata and configuration", "")
@@ -29,13 +28,12 @@ System_Boundary(warmHouseSystem, "WarmHouse System") {
 }
 Rel(userDeviceService, userAccessCheckApi, "", "sync")
 Rel(userDeviceService, userAccessListApi, "", "sync")
-Rel(userDeviceService, deviceAccessListApi, "", "sync")
 Rel(userDeviceService, deviceClaimApi, "", "sync")
 Rel(userDeviceService, deviceAccessManagementApi, "", "sync")
 
 Rel(userAccessListApi, accessReadComponent, "")
 Rel(userAccessCheckApi, accessReadComponent, "")
-Rel(deviceAccessListApi, accessReadComponent, "")
+Rel(deviceAccessManagementApi, accessReadComponent, "")
 Rel(accessReadComponent, deviceAccessRepository, "Reads access mapping user-device")
 
 Rel(deviceAccessManagementApi, deviceAccessManagementComponent, "")
