@@ -7,7 +7,7 @@ title Warmhouse Container Diagram
 
 top to bottom direction
 
-AddRelTag("async", $lineStyle = DashedLine())
+AddRelTag("async", $textColor="$ARROW_FONT_COLOR", $lineColor="$ARROW_COLOR", $lineStyle = DashedLine())
 
 together {
     Person(user, "User", "A user of the WarmHouse system")
