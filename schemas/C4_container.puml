@@ -5,8 +5,6 @@
 SHOW_PERSON_OUTLINE()
 title Warmhouse Container Diagram
 
-top to bottom direction
-
 AddRelTag("async", $textColor="$ARROW_FONT_COLOR", $lineColor="$ARROW_COLOR", $lineStyle = DashedLine())
 
 together {
@@ -18,6 +16,7 @@ together {
 together {
     System_Ext(httpsDevice, "HTTPS Device", "Smart home device with HTTPS communication")
     System_Ext(mqttDevice, "MQTT Device", "Smart home device with MQTT communication")
+    Lay_U(mqttDevice ,httpsDevice)
 }
 
 System_Boundary(warmHouseSystem, "WarmHouse System") {
@@ -25,112 +24,110 @@ System_Boundary(warmHouseSystem, "WarmHouse System") {
     Container(helpdeskAdapter, "HelpDesk Adapter", , "HelpDesk Adapter",)
     Container(userDeviceService, "User Device Service", , "End user interface with access check")
 
-    Container_Boundary(auth_domain, "Auth Domain") {
+    Container_Boundary(auth_domain, "Auth Subdomain") {
         Container(authService, "Auth Service", , "User profile management and authentication")
         ContainerDb(authServiceDb, "Auth Database",  "SQL Database", "Stores user credentials and profile", "")
     }
-    Container_Boundary(device_access_domain, "Access Control Domain") {
+    Container_Boundary(device_access_domain, "Access Control Subdomain") {
         Container(deviceAccessService, "Device Access Service", ,"Enforces device access control and manages Access Control Lists", "")
         ContainerDb(deviceAccessDb, "Device Access Database",  "SQL Database", "Stores device Access Control List", "")
     }
 
-    Container_Boundary(device_core_domain, "Device Core Domain") {
-        Container(deviceService, "Device Service", ,"Stores and allows to control device metadata and configuration", "")
-        ContainerDb(deviceDb, "Device Database",  "SQL Database", "Stores device metadata, configuration", "")
+    Container_Boundary(device_metadata_domain, "Device Metadata Subdomain") {
+        Container(deviceInitProcessor, "Device Init Processor","", "Transformation of initialization messages (Anti-Corruption Layer)", "")
+        Container(deviceMetadataService, "Device Metadata Service", ,"Stores device metadata", "")
+        ContainerDb(deviceMetadataDb, "Device Metadata Database", "SQL Database", "Stores device metadata", "")
     }
 
-    Container_Boundary(device_communication_domain, "Device Communication Domain") {
+    Container_Boundary(device_communication_domain, "Device Communication Subdomain") {
         ContainerQueue(deviceMqttBroker, "Device MQTT Broker", "MQTT Broker", "Device communication broker")
         Container(deviceHttpsServer, "Device HTTPS Server", "HTTPS server", "Device communication server")
         ContainerQueue(deviceIngressTopic, "Device Ingress Topic", "Kafka", "Device messages fan-out topic")
         Container(deviceCommandRouter, "Device Command Router", "", "Routes communication to devices")
-        Container(deviceConnectionService, "Device Connection Service",, "Selects connection details info from messages, CRUD device connection details", "")
+        Container(deviceConnectionService, "Device Connection Service",, "Transformation of connection details, CRUD device connection details", "")
         ContainerDb(deviceConnectionDb, "Device Connection Database",  "SQL Database", "Stores device connection details", "")
       }
 
-    Container_Boundary(device_configuration_domain, "Device Configuration Domain") {
-        Container(configurationProcessor, "Configuration Processor","", "Selects and processes configuration from devices (Anti-Corruption Layer)", "")
-        ' ContainerQueue(transformedConfigurationTopic, "Processed Configuration Topic", "Kafka",)
+    Container_Boundary(device_configuration_domain, "Device Configuration Subdomain") {
+        Container(deviceConfigurationService, "Device Configuration Service", ,"Stores device configuration", "")
+        ContainerDb(deviceConfigurationDb, "Device Configuration Database", "SQL Database", "Stores device configuration", "")
+        Container(configurationProcessor, "Configuration Processor","", "Bidirectional transformation of configuration (Anti-Corruption Layer)", "")
     }
 
-    Container_Boundary(device_readings_domain, "Device Readings Domain") {
-        Container(readingsProcessor, "Readings Processor","", "Selects and processes readings from devices (Anti-Corruption Layer)", "")
+    Container_Boundary(device_readings_domain, "Device Readings Subdomain") {
+        Container(readingsProcessor, "Readings Processor","", "Transformation of readings (Anti-Corruption Layer)", "")
         ContainerQueue(processedReadingsTopic, "Processed Readings Topic", "Kafka",)
         Container(lastReadingService, "Last Reading Service", , "CRUD Last readings of devices")
-        ContainerDb(readingsDb, "Readings Database", "SQL Database", "Stores last readings of devices in internal format")
+        ContainerDb(readingsDb, "Readings Database", "SQL Database", "Stores last readings of devices")
     }
 
-    Container_Boundary(automation_domain, "Automation Domain") {
+    Container_Boundary(automation_domain, "Automation Subdomain") {
         Container(automationRuleEngineService, "Automation Rule Engine Service",, "Executes automation rules", "")
-        ' ContainerQueue(automationRuleUpdateTopic, "Automation Rule Update Topic", "Kafka", "")
         Container(automationRuleManagerService, "Automation Rule Manager Service",, "Verifies automation rules requests, stores event sourced rules and projection", "")
         ContainerDb(automationRuleDb, "Automation Rule Database",  "SQL Database", "Stores automation rule domain events and projection", "")
     }
 }
 
-' Device access domain
-Rel(deviceAccessService, deviceService, "Reads unclaimed devices")
+' Device access Subdomain
+Rel(deviceAccessService, deviceMetadataService, "Reads unclaimed devices")
 Rel(deviceAccessService, deviceAccessDb, "", )
 
-' Auth Domain
-Rel(authService, authServiceDb, "", )
+' Auth Subdomain
+Rel_U(authService, authServiceDb, "", )
 
-' Device Core Domain
-Rel(deviceService, deviceDb, "Read/Write device configuration/metadata")
-Rel(deviceService, deviceCommandRouter, "Sends commands to the devices")
-Rel(configurationProcessor, deviceService, "Reads processed configuration", "Kafka topic", $tags="async")
-' Rel(transformedConfigurationTopic, deviceService, "")
+' Device Metadata Subdomain
+Rel(deviceIngressTopic, deviceInitProcessor, "", "", $tags="async")
+Rel(deviceInitProcessor, deviceMetadataService, "Reads processed initialization messages")
+Rel(deviceMetadataService, deviceMetadataDb, "")
+Rel(deviceConfigurationService, deviceConfigurationDb, "")
 
-' Device Communication Domain
+' Device Communication Subdomain
 Rel(httpsDevice, deviceHttpsServer, "Sends readings and current configuration", "HTTPS")
 Rel(deviceHttpsServer, httpsDevice, "Sends commands", "HTTPS")
-Rel(deviceCommandRouter, deviceHttpsServer, "Sends commands to the devices")
+Rel(deviceCommandRouter, deviceHttpsServer, "")
 Rel(deviceHttpsServer, deviceIngressTopic, "")
-Rel(deviceMqttBroker, mqttDevice, "Sends commands", "MQTT", $tags="async")
+Rel_U(deviceMqttBroker, mqttDevice, "Sends commands", "MQTT", $tags="async")
 Rel(mqttDevice, deviceMqttBroker, "Sends readings and current configuration", "MQTT")
-Rel(deviceCommandRouter, deviceMqttBroker, "Sends commands to the devices")
+Rel(deviceCommandRouter, deviceMqttBroker, "")
 Rel(deviceMqttBroker, deviceIngressTopic, "", "", $tags="async")
-
-' Device Configuration Domain
-Rel(deviceIngressTopic, configurationProcessor, "", "", $tags="async")
-' Rel(configurationProcessor, transformedConfigurationTopic, "Sends processed configuration to consumers")
-
-' Device Readings Domain
-Rel(deviceIngressTopic, readingsProcessor, "", "", $tags="async")
-Rel(readingsProcessor, processedReadingsTopic, "Sends processed readings to consumers")
-Rel(processedReadingsTopic, lastReadingService, "", $tags="async")
-Rel(lastReadingService, readingsDb, "Read/Write last readings")
-
-' Device connection use case
 Rel(deviceIngressTopic, deviceConnectionService, "", "", $tags="async")
-Rel(deviceCommandRouter, deviceConnectionService, "Get device connection details")
-Rel(deviceConnectionService, deviceConnectionDb, "Read/Write connection details")
+Rel_U(deviceCommandRouter, deviceConnectionService, "Get device connection details")
+Rel_U(deviceConnectionService, deviceConnectionDb, "")
 
-' Automation domain
-Rel(automationRuleManagerService, automationRuleDb, "Read/Write domain events and projection")
-' Rel(automationRuleManagerService, automationRuleUpdateTopic, "Pushes rule updates")
+' Device Configuration Subdomain
+Rel(deviceIngressTopic, configurationProcessor, "", "", $tags="async")
+Rel_L(configurationProcessor, deviceConfigurationService, "Reads processed configuration", "Kafka topic", $tags="async")
+Rel_R(deviceConfigurationService, configurationProcessor, "Sends commands to the devices")
+Rel(configurationProcessor, deviceCommandRouter, "")
+
+' Device Readings Subdomain
+Rel_U(deviceIngressTopic, readingsProcessor, "", "", $tags="async")
+Rel_U(readingsProcessor, processedReadingsTopic, "Sends processed readings to consumers")
+Rel_U(processedReadingsTopic, lastReadingService, "", $tags="async")
+Rel_U(lastReadingService, readingsDb, "")
+
+' Automation Subdomain
+Rel(automationRuleManagerService, automationRuleDb, "")
 Rel(processedReadingsTopic, automationRuleEngineService, "", "", $tags="async")
-' Rel(automationRuleUpdateTopic, automationRuleEngineService, "", "", $tags="async")
 Rel(automationRuleManagerService, automationRuleEngineService, "", "Kafka topic", $tags="async")
-Rel(automationRuleEngineService, deviceService, "Executes rules via sending commands")
+Rel(automationRuleEngineService, deviceConfigurationService, "Executes rules via sending commands")
 
 ' Support use cases
-Rel(support, helpdesk, "Works with support tickets")
+Rel_U(support, helpdesk, "Works with support tickets")
 
 ' Customer use cases
 Rel(user, customerGateway, "Sends requests via public API", "HTTPS")
-Rel(customerGateway, authService, "Authenticates user and get access token")
+Rel_U(customerGateway, authService, "Authenticates user and get access token")
 Rel(customerGateway, userDeviceService, "Execute user requests")
 Rel(userDeviceService, deviceAccessService, "Assigns device to user and verifies user access to device")
-Rel(userDeviceService, deviceService, "Manages device configuration")
+Rel_U(userDeviceService, deviceConfigurationService, "Manages device configuration")
+Rel(userDeviceService, deviceMetadataService, "Manages device metadata")
 Rel(userDeviceService, lastReadingService, "Reads last received device readings")
 Rel(userDeviceService, automationRuleManagerService, "Manages automation rules")
 Rel(customerGateway, helpdeskAdapter, "Sends user ticket to HelpDesk via adapter")
 Rel(helpdeskAdapter, helpdesk, "Registers user ticket with HelpDesk system")
 
-
-Lay_L(user, support)
 Lay_R(customerGateway, auth_domain)
-Lay_D(device_core_domain, userDeviceService)
+Lay_U(userDeviceService, device_access_domain)
 SHOW_LEGEND()
 @enduml

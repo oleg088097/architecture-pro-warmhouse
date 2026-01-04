@@ -1,0 +1,46 @@
+@startuml
+
+title Device Service Outbox Code Diagram
+
+record ConfigurationUpdateCommand {
+  +String commandId
+  +String deviceId
+  +String config
+  +String lastSeenVersion
+}
+enum ConfigurationUpdateStatus {
+  PENDING
+  SENT
+  ACK
+  FAILED
+}
+entity ConfigurationUpdateRequest {
+  +String commandId
+  +String deviceId
+  +String config
+  +String version
+  +ConfigurationUpdateStatus status
+  +Date createdAt
+}
+
+class Membership {
+  +String type
+  +Date startDate
+  +Date endDate
+  +void activate()
+  +void cancel()
+}
+
+class Schedule {
+  +Date date
+  +String activity
+  +void addActivity()
+  +void removeActivity()
+}
+
+User "1" -- "0..*" Membership : has
+Membership "1" -- "0..*" Schedule : includes
+
+@enduml
+SHOW_LEGEND()
+@enduml
