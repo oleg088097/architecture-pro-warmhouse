@@ -24,22 +24,22 @@ System_Boundary(warmHouseSystem, "WarmHouse System") {
     Container(helpdeskAdapter, "HelpDesk Adapter", , "HelpDesk Adapter",)
     Container(userDeviceService, "User Device Service", , "End user interface with access check")
 
-    Container_Boundary(auth_domain, "Auth Subdomain") {
+    Container_Boundary(auth_subdomain, "Auth Subdomain") {
         Container(authService, "Auth Service", , "User profile management and authentication")
         ContainerDb(authServiceDb, "Auth Database",  "SQL Database", "Stores user credentials and profile", "")
     }
-    Container_Boundary(device_access_domain, "Access Control Subdomain") {
+    Container_Boundary(device_access_subdomain, "Access Control Subdomain") {
         Container(deviceAccessService, "Device Access Service", ,"Enforces device access control and manages Access Control Lists", "")
         ContainerDb(deviceAccessDb, "Device Access Database",  "SQL Database", "Stores device Access Control List", "")
     }
 
-    Container_Boundary(device_metadata_domain, "Device Metadata Subdomain") {
+    Container_Boundary(device_metadata_subdomain, "Device Metadata Subdomain") {
         Container(deviceInitProcessor, "Device Init Processor","", "Transformation of initialization messages (Anti-Corruption Layer)", "")
         Container(deviceMetadataService, "Device Metadata Service", ,"Stores device metadata", "")
         ContainerDb(deviceMetadataDb, "Device Metadata Database", "SQL Database", "Stores device metadata", "")
     }
 
-    Container_Boundary(device_communication_domain, "Device Communication Subdomain") {
+    Container_Boundary(device_communication_subdomain, "Device Communication Subdomain") {
         ContainerQueue(deviceMqttBroker, "Device MQTT Broker", "MQTT Broker", "Device communication broker")
         Container(deviceHttpsServer, "Device HTTPS Server", "HTTPS server", "Device communication server")
         ContainerQueue(deviceIngressTopic, "Device Ingress Topic", "Kafka", "Device messages fan-out topic")
@@ -48,20 +48,20 @@ System_Boundary(warmHouseSystem, "WarmHouse System") {
         ContainerDb(deviceConnectionDb, "Device Connection Database",  "SQL Database", "Stores device connection details", "")
       }
 
-    Container_Boundary(device_configuration_domain, "Device Configuration Subdomain") {
+    Container_Boundary(device_configuration_subdomain, "Device Configuration Subdomain") {
         Container(deviceConfigurationService, "Device Configuration Service", ,"Stores device configuration", "")
         ContainerDb(deviceConfigurationDb, "Device Configuration Database", "SQL Database", "Stores device configuration", "")
         Container(configurationProcessor, "Configuration Processor","", "Bidirectional transformation of configuration (Anti-Corruption Layer)", "")
     }
 
-    Container_Boundary(device_readings_domain, "Device Readings Subdomain") {
+    Container_Boundary(device_readings_subdomain, "Device Readings Subdomain") {
         Container(readingsProcessor, "Readings Processor","", "Transformation of readings (Anti-Corruption Layer)", "")
         ContainerQueue(processedReadingsTopic, "Processed Readings Topic", "Kafka",)
         Container(lastReadingService, "Last Reading Service", , "CRUD Last readings of devices")
         ContainerDb(readingsDb, "Readings Database", "SQL Database", "Stores last readings of devices")
     }
 
-    Container_Boundary(automation_domain, "Automation Subdomain") {
+    Container_Boundary(automation_subdomain, "Automation Subdomain") {
         Container(automationRuleEngineService, "Automation Rule Engine Service",, "Executes automation rules", "")
         Container(automationRuleManagerService, "Automation Rule Manager Service",, "Verifies automation rules requests, stores event sourced rules and projection", "")
         ContainerDb(automationRuleDb, "Automation Rule Database",  "SQL Database", "Stores automation rule domain events and projection", "")
@@ -127,7 +127,7 @@ Rel(userDeviceService, automationRuleManagerService, "Manages automation rules")
 Rel(customerGateway, helpdeskAdapter, "Sends user ticket to HelpDesk via adapter")
 Rel(helpdeskAdapter, helpdesk, "Registers user ticket with HelpDesk system")
 
-Lay_R(customerGateway, auth_domain)
-Lay_U(userDeviceService, device_access_domain)
+Lay_R(customerGateway, auth_subdomain)
+Lay_U(userDeviceService, device_access_subdomain)
 SHOW_LEGEND()
 @enduml
