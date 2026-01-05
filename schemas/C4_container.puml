@@ -43,9 +43,8 @@ System_Boundary(warmHouseSystem, "WarmHouse System") {
         ContainerQueue(deviceMqttBroker, "Device MQTT Broker", "MQTT Broker", "Device communication broker")
         Container(deviceHttpsServer, "Device HTTPS Server", "HTTPS server", "Device communication server")
         ContainerQueue(deviceIngressTopic, "Device Ingress Topic", "Kafka", "Device messages fan-out topic")
-        Container(deviceCommandRouter, "Device Command Router", "", "Routes communication to devices")
-        Container(deviceConnectionService, "Device Connection Service",, "Transformation of connection details, CRUD device connection details", "")
-        ContainerDb(deviceConnectionDb, "Device Connection Database",  "SQL Database", "Stores device connection details", "")
+        Container(deviceCommandRouter, "Device Command Router", "", "Extracts routing data from messages, routes communication to devices")
+        ContainerDb(deviceRouteDb, "Device Route Database",  "SQL Database", "Stores device routing", "")
       }
 
     Container_Boundary(device_configuration_subdomain, "Device Configuration Subdomain") {
@@ -90,9 +89,8 @@ Rel_U(deviceMqttBroker, mqttDevice, "Sends commands", "MQTT", $tags="async")
 Rel(mqttDevice, deviceMqttBroker, "Sends readings and current configuration", "MQTT")
 Rel(deviceCommandRouter, deviceMqttBroker, "")
 Rel(deviceMqttBroker, deviceIngressTopic, "", "", $tags="async")
-Rel(deviceIngressTopic, deviceConnectionService, "", "", $tags="async")
-Rel_U(deviceCommandRouter, deviceConnectionService, "Get device connection details")
-Rel_U(deviceConnectionService, deviceConnectionDb, "")
+Rel(deviceIngressTopic, deviceCommandRouter, "", "", $tags="async")
+Rel_U(deviceCommandRouter, deviceRouteDb, "")
 
 ' Device Configuration Subdomain
 Rel(deviceIngressTopic, configurationProcessor, "", "", $tags="async")
