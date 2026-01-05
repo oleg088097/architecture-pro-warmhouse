@@ -4,7 +4,7 @@ title Device Service Outbox Code Diagram
 
 package Infrastructure {
   class ConfigurationUpdateRepositoryImpl
-  class ConfigurationUpdateEventRepositoryImpl
+  class ConfigurationUpdateOutboxImpl
 }
 
 package ConfigurationComponent {
@@ -25,14 +25,13 @@ package ConfigurationOutboxComponent {
         +ConfigurationUpdate save(ConfigurationUpdate)
     }
 
-    interface ConfigurationUpdateEventRepository {
-        +ConfigurationUpdateEvent save(ConfigurationUpdateEvent)
-        +ConfigurationUpdateEvent getForUpdate()
-        +ConfigurationUpdateEvent delete(eventId)
+    interface ConfigurationUpdateOutboxRepository {
+        +ConfigurationUpdateOutbox save(ConfigurationUpdateEvent)
+        +ConfigurationUpdateOutbox getForAttempt()
+        +ConfigurationUpdateOutbox delete(commandId)
     }
 
-    entity ConfigurationUpdateEvent <<Entity>> {
-      +Integer eventId
+    entity ConfigurationUpdateOutbox <<Entity>> {
       +Integer commandId
       +Integer deviceId
       +String config
@@ -60,7 +59,7 @@ package ConfigurationOutboxComponent {
 
     note right of ConfigurationUpdateService
       Saves ConfigurationUpdate and
-      ConfigurationUpdateEvent
+      ConfigurationUpdateOutbox
       in a single transaction
     end note
 
@@ -73,7 +72,7 @@ package ConfigurationOutboxComponent {
       -Date createdAt
 
       +ConfigurationUpdate constructor(ConfigurationUpdateCommand, Configuration)
-      +ConfigurationUpdateEvent createUpdateEvent()
+      +ConfigurationUpdateOutbox createUpdateEvent()
       +void matchConfigToAck(Configuration)
       +void checkTimeout()
     }
@@ -86,22 +85,22 @@ package ConfigurationOutboxComponent {
         Sets status ConfigurationUpdateStatus::ACK on
         Configuration::config match ConfigurationUpdate::command::config.
     end note
-    class ConfigurationUpdateEventRelay <<Application Service>> {
+    class ConfigurationUpdateOutboxRelay <<Application Service>> {
         +void sendUpdateEvent(ConfigurationUpdateEvent)
     }
 }
 
-ConfigurationUpdateEventRelay -->  ConfigurationUpdateEvent
-ConfigurationUpdateEventRelay -->  ConfigurationUpdateEventRepository
+ConfigurationUpdateOutboxRelay -->  ConfigurationUpdateOutbox
+ConfigurationUpdateOutboxRelay -->  ConfigurationUpdateOutboxRepository
 
 ConfigurationUpdateService -->  ConfigurationRepository
 ConfigurationUpdateService -->  ConfigurationUpdateRepository
-ConfigurationUpdateService -->  ConfigurationUpdateEventRepository
+ConfigurationUpdateService -->  ConfigurationUpdateOutboxRepository
 ConfigurationUpdateService -->  ConfigurationUpdate
 
 ConfigurationUpdate ..> ConfigurationUpdateCommand : created from
 
 ConfigurationUpdateRepositoryImpl ..> ConfigurationUpdateRepository
-ConfigurationUpdateEventRepositoryImpl ..> ConfigurationUpdateEventRepository
+ConfigurationUpdateOutboxImpl ..> ConfigurationUpdateOutboxRepository
 
 @enduml
