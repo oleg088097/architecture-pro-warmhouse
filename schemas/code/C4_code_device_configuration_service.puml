@@ -12,6 +12,7 @@ package ConfigurationComponent {
       +Integer deviceId
       +String config
       +Integer version
+      +Date receivedAt
     }
     interface ConfigurationRepository {
         +Configuration findByDeviceId(deviceId)
