@@ -40,10 +40,14 @@ package ConfigurationOutboxComponent {
     }
 
     record ConfigurationUpdateCommand <<Value Object>> {
-      +Integer commandId
       +Integer deviceId
       +String config
       +Integer lastSeenConfigVersion
+    }
+    record ConfigurationUpdateCommandResponse <<Value Object>> {
+      +Integer commandId
+      +Integer deviceId
+      +String config
     }
     enum ConfigurationUpdateStatus {
       PENDING
@@ -53,7 +57,7 @@ package ConfigurationOutboxComponent {
     }
 
     class ConfigurationUpdateService <<Application Service>> {
-        +void sendUpdate(ConfigurationUpdateCommand)
+        +ConfigurationUpdateCommandResponse issueUpdateCommand(ConfigurationUpdateCommand)
         +void matchConfigFromDevice(Configuration)
         +void applyTimeout()
     }
@@ -64,7 +68,7 @@ package ConfigurationOutboxComponent {
       in a single transaction
     end note
 
-    entity ConfigurationUpdate <<Aggregate Root>>{
+    entity ConfigurationUpdate <<Aggregate Root>> {
       -Integer commandId
       -Integer deviceId
       -String config
@@ -74,6 +78,7 @@ package ConfigurationOutboxComponent {
 
       +ConfigurationUpdate constructor(ConfigurationUpdateCommand, Configuration)
       +ConfigurationUpdateOutbox createUpdateEvent()
+      +ConfigurationUpdateCommandResponse getCommandResponse()
       +void matchConfigToAck(Configuration)
       +void checkTimeout()
     }
