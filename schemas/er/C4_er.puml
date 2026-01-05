@@ -85,7 +85,7 @@ entity Configuration {
 }
 
 entity ConfigurationUpdate {
-    * command_id : int
+    * command_id : int <<generated>>
     --
     * device_id : int <<FK>>
     * config : text
