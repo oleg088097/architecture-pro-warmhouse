@@ -40,9 +40,5 @@ Rel(configurationOutboxComponent, configurationComponent, "Verify that update is
 
 Rel(configurationRepository, deviceDb, "")
 
-' database needs to have metadata table device_id - metadata?
-' database needs to have configuration table config_id - device_id - config
-' database needs to have config_outbox table command_id - device_id - config - start_time - attempt_count - status (PENDING/SENT/FAILED)
-
 SHOW_LEGEND()
 @enduml

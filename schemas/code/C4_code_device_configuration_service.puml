@@ -9,11 +9,11 @@ package Infrastructure {
 
 package ConfigurationComponent {
     entity Configuration {
-      +String deviceId
+      +Integer deviceId
       +String config
-      +String version
+      +Integer version
     }
-    interface ConfigurationRepository{
+    interface ConfigurationRepository {
         +Configuration findByDeviceId(deviceId)
     }
 }
@@ -32,17 +32,18 @@ package ConfigurationOutboxComponent {
     }
 
     entity ConfigurationUpdateEvent <<Entity>> {
-      +String eventId
-      +String commandId
-      +String deviceId
+      +Integer eventId
+      +Integer commandId
+      +Integer deviceId
       +String config
+      +Integer attemptCount
     }
 
     record ConfigurationUpdateCommand <<Value Object>> {
-      +String commandId
-      +String deviceId
+      +Integer commandId
+      +Integer deviceId
       +String config
-      +String lastSeenConfigVersion
+      +Integer lastSeenConfigVersion
     }
     enum ConfigurationUpdateStatus {
       PENDING
@@ -64,10 +65,11 @@ package ConfigurationOutboxComponent {
     end note
 
     entity ConfigurationUpdate <<Aggregate Root>>{
-      -String commandId
-      -String deviceId
+      -Integer commandId
+      -Integer deviceId
       -String config
-      -String persistenceVersion
+      -Integer persistenceVersion
+      -ConfigurationUpdateStatus status
       -Date createdAt
 
       +ConfigurationUpdate constructor(ConfigurationUpdateCommand, Configuration)
@@ -92,12 +94,12 @@ package ConfigurationOutboxComponent {
 ConfigurationUpdateEventRelay -->  ConfigurationUpdateEvent
 ConfigurationUpdateEventRelay -->  ConfigurationUpdateEventRepository
 
+ConfigurationUpdateService -->  ConfigurationRepository
 ConfigurationUpdateService -->  ConfigurationUpdateRepository
 ConfigurationUpdateService -->  ConfigurationUpdateEventRepository
 ConfigurationUpdateService -->  ConfigurationUpdate
 
 ConfigurationUpdate ..> ConfigurationUpdateCommand : created from
-ConfigurationUpdate *--  ConfigurationUpdateStatus
 
 ConfigurationUpdateRepositoryImpl ..> ConfigurationUpdateRepository
 ConfigurationUpdateEventRepositoryImpl ..> ConfigurationUpdateEventRepository
