@@ -21,7 +21,8 @@ System_Boundary(warmHouseSystem, "WarmHouse System") {
         Component(deviceClaimComponent, "Device Claim Component", ,"Provides functionality to claim unclaimed device", "")
         Component(deviceAccessManagementComponent, "Device Access Management Component", ,"Allows to read/write list of users with access to device", "")
 
-        Component(deviceServiceComponent, "Device Service Component", ,"API Client", "")
+        Component(deviceConfigurationServiceComponent, "Device Configuration Service Component", ,"API Client", "")
+        Component(deviceMetadataServiceComponent, "Device Metadata Service Component", ,"API Client", "")
         Component(deviceAccessServiceComponent, "Device Access Service Component", ,"API Client", "")
         Component(lastReadingServiceComponent, "Last Reading Service Component", ,"API Client", "")
         Component(automationRuleManagerServiceComponent, "Automation Rule Manager Service Component", ,"API Client", "")
@@ -30,20 +31,21 @@ System_Boundary(warmHouseSystem, "WarmHouse System") {
     Container(lastReadingService, "Last Reading Service", , "CRUD Last readings of devices")
     Container(deviceAccessService, "Device Access Service", ,"Enforces device access control and manages Access Control Lists", "")
     Container(automationRuleManagerService, "Automation Rule Manager Service",, "Verifies automation rules requests, stores event sourced rules and projection", "")
-    Container(deviceService, "Device Service", ,"Stores and allows to control device metadata and configuration", "")
+    Container(deviceConfigurationService, "Device Configuration Service", ,"Stores device configuration", "")
+    Container(deviceMetadataService, "Device Metadata Service", ,"Stores device metadata", "")
 }
 
 Rel(customerGateway, deviceMetadataApi, "User requests to list available devices, write metadata", "sync")
 Rel(deviceMetadataApi, deviceMetadataComponent, "")
-Rel(deviceMetadataComponent, deviceServiceComponent, "Reads/Writes metadata")
+Rel(deviceMetadataComponent, deviceMetadataServiceComponent, "Delegates metadata operations to Device Metadata Service")
 Rel(deviceMetadataComponent, deviceAccessServiceComponent, "Gets list of devices available for user, checks write access to device metadata")
-Rel(deviceServiceComponent, deviceService, "Manages device metadata")
+Rel(deviceMetadataServiceComponent, deviceMetadataService, "Manages device metadata")
 
 Rel(customerGateway, deviceConfigurationApi, "User requests to read/write configuration", "sync")
 Rel(deviceConfigurationApi, deviceConfigurationComponent, "")
-Rel(deviceConfigurationComponent, deviceServiceComponent, "Reads/Writes configuration")
+Rel(deviceConfigurationComponent, deviceConfigurationServiceComponent, "Delegates configuration operations to Device Configuration Service")
 Rel(deviceConfigurationComponent, deviceAccessServiceComponent, "Checks access to device configuration")
-Rel(deviceServiceComponent, deviceService, "Manages device configuration")
+Rel(deviceConfigurationServiceComponent, deviceConfigurationService, "Manages device configuration")
 
 Rel(customerGateway, lastReadingApi, "User requests to read last reading for device", "sync")
 Rel(lastReadingApi, lastReadingComponent, "")
@@ -60,7 +62,7 @@ Rel(automationRuleManagerServiceComponent, automationRuleManagerService, "Manage
 
 Rel(customerGateway, deviceClaimApi, "User requests to claim device", "sync")
 Rel(deviceClaimApi, deviceClaimComponent, "")
-Rel(deviceClaimComponent, deviceAccessServiceComponent, "Claims device to user")
+Rel(deviceClaimComponent, deviceAccessServiceComponent, "Delegates device claiming to Device Access Service")
 Rel(customerGateway, deviceAccessManagementApi, "User requests to read/write access control list", "sync")
 Rel(deviceAccessManagementApi, deviceAccessManagementComponent, "")
 Rel(deviceAccessManagementComponent, deviceAccessServiceComponent, "Checks access to device and reads/writes access control lists")
