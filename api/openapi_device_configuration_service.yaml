@@ -1,0 +1,151 @@
+openapi: 3.1.0
+info:
+  title: Device Configuration Service
+  version: 0.0.0
+  description: |-
+    Device Configuration Service provides API to view current configuration for the device and send updated configuration to devices.
+
+tags:
+  - name: configuration
+    description: Manage device configuration
+
+paths:
+  /configuration/{deviceId}:
+    get:
+      tags:
+        - configuration
+      summary: Get device configuration by device identifier.
+      description: Returns a single configuration.
+      operationId: getConfigByDeviceId
+      parameters:
+        - name: deviceId
+          in: path
+          description: ID of device to return configuration for
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Configuration'
+        '400':
+          description: Invalid ID supplied
+        '404':
+          description: Configuration not found
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    put:
+      tags:
+        - configuration
+      summary: Issue device configuration update command.
+      description: Issue device configuration update command with body content.
+        On accepted request device configuration will be sent to device and device configuration changes will be monitored for confirmation.
+        Update for accepted request could fail by timeout in case device configuration does not converge within given timeframe.
+        Concurrent updates are not allowed. In case there is update already in progress for given deviceId error is returned.
+        To prevent lost updates, request body parameter "lastSeenConfigVersion" is required to match actual configuration version.
+      operationId: updateConfiguration
+      parameters:
+        - name: deviceId
+          in: path
+          description: ID of device to update configuration
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        description: Update command
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigurationUpdateCommand'
+        required: true
+      responses:
+        '202':
+          description: Update command accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigurationUpdateCommandResponse"
+        '400':
+          description: Invalid input
+        '409':
+          description: Config version mismatch
+        '503':
+          description: Concurrent updates are not allowed
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  schemas:
+    Configuration:
+      type: object
+      properties:
+        deviceId:
+          type: integer
+          format: int64
+          examples: [101]
+        config:
+          type: string
+          examples: ['{"enable": true}']
+        version:
+          type: integer
+          format: int32
+          examples: [1,2]
+        receivedAt:
+          type: integer
+          format: int64
+          examples: [1767621039]
+
+    ConfigurationUpdateCommand:
+      type: object
+      properties:
+        deviceId:
+          type: integer
+          format: int64
+          examples: [101]
+        config:
+          type: string
+          examples: ['{"enable": false}']
+        lastSeenConfigVersion:
+          type: integer
+          format: int32
+          examples: [1,2]
+
+    ConfigurationUpdateCommandResponse:
+      type: object
+      properties:
+        deviceId:
+          type: integer
+          format: int64
+          examples: [101]
+        config:
+          type: string
+          examples: ['{"enable": false}']
+        commandId:
+          type: integer
+          format: int64
+          examples: [1337,42601]
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+      required:
+        - code
+        - message
