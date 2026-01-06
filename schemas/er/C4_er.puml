@@ -56,7 +56,7 @@ entity DeviceTypeReadingsMetadata {
 }
 
 entity DeviceMetadata {
-    * device_id : int <<generated>>
+    * device_id : int
     --
     * name : text
     * device_type_id : int <<FK>>
