@@ -16,13 +16,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.ACTIONS_PAT }}
 
       - name: Generate diagrams
         run: |
           docker run --rm \
             -v ${{ github.workspace }}:/work \
             plantuml/plantuml \
-            -tsvg /work/schemas
+            -tsvg /work/schemas/**
 
       - name: Commit Diagrams
         run: |
