@@ -16,15 +16,17 @@ import (
 
 // SensorHandler handles sensor-related requests
 type SensorHandler struct {
-	DB                 *db.DB
-	TemperatureService *services.TemperatureService
+	DB                   *db.DB
+	TemperatureService   *services.TemperatureService
+	ConfigurationService *services.ConfigurationService
 }
 
 // NewSensorHandler creates a new SensorHandler
-func NewSensorHandler(db *db.DB, temperatureService *services.TemperatureService) *SensorHandler {
+func NewSensorHandler(db *db.DB, temperatureService *services.TemperatureService, configurationService *services.ConfigurationService) *SensorHandler {
 	return &SensorHandler{
-		DB:                 db,
-		TemperatureService: temperatureService,
+		DB:                   db,
+		TemperatureService:   temperatureService,
+		ConfigurationService: configurationService,
 	}
 }
 
@@ -39,6 +41,7 @@ func (h *SensorHandler) RegisterRoutes(router *gin.RouterGroup) {
 		sensors.DELETE("/:id", h.DeleteSensor)
 		sensors.PATCH("/:id/value", h.UpdateSensorValue)
 		sensors.GET("/temperature/:location", h.GetTemperatureByLocation)
+		sensors.POST("/:id/configuration", h.UpdateSensorConfiguration)
 	}
 }
 
@@ -97,7 +100,27 @@ func (h *SensorHandler) GetSensorByID(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, sensor)
+	// Enrich with device configuration from device-configuration-service
+	cfg, _, err := h.ConfigurationService.GetConfiguration(id)
+	var cfgJSON interface{}
+	if err != nil {
+		cfgJSON = nil
+	} else {
+		cfgJSON = cfg
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"id":           sensor.ID,
+		"name":         sensor.Name,
+		"type":         sensor.Type,
+		"location":     sensor.Location,
+		"value":        sensor.Value,
+		"unit":         sensor.Unit,
+		"status":       sensor.Status,
+		"last_updated": sensor.LastUpdated,
+		"created_at":   sensor.CreatedAt,
+		"config":       cfgJSON,
+	})
 }
 
 // GetTemperatureByLocation handles GET /api/v1/sensors/temperature/:location
@@ -210,4 +233,32 @@ func (h *SensorHandler) UpdateSensorValue(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Sensor value updated successfully"})
+}
+
+// UpdateSensorConfiguration handles POST /api/v1/sensors/:id/configuration
+// Delegates to device-configuration-service PUT /configuration/:deviceId
+func (h *SensorHandler) UpdateSensorConfiguration(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid sensor ID"})
+		return
+	}
+
+	var cmd services.ConfigurationUpdateCommand
+	if err := c.ShouldBindJSON(&cmd); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	resp, status, err := h.ConfigurationService.UpdateConfiguration(id, cmd)
+	if err != nil {
+		// pass through status if available, otherwise 502
+		if status == 0 {
+			status = http.StatusBadGateway
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusAccepted, resp)
 }
