@@ -1,0 +1,72 @@
+@startuml
+!NEW_C4_STYLE=1
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title User Device Service Component Diagram
+top to bottom direction
+
+System_Boundary(warmHouseSystem, "WarmHouse System") {
+    Container_Boundary(userDeviceService, "User Device Service") {
+        Component(deviceMetadataApi, "Device Metadata API", ,"Allows to read/write device metadata", "")
+        Component(deviceConfigurationApi, "Device Configuration API", ,"Allows to read/write configuration for device", "")
+        Component(lastReadingApi, "Last Reading API", ,"Allows to read last reading for device", "")
+        Component(automationRuleManagerApi, "Automation Rule Manager API", ,"Allows to read/write automation rules for device", "")
+        Component(deviceClaimApi, "Device Claim API", ,"Allows to claim unclaimed device", "")
+        Component(deviceAccessManagementApi, "Device Access Management API", ,"Allows to read/write access control lists for device", "")
+
+        Component(deviceMetadataComponent, "Device Metadata Component", ,"Provides functionality to read/write device metadata", "")
+        Component(deviceConfigurationComponent, "Device Configuration Component", ,"Provides functionality to read/write device configuration", "")
+        Component(lastReadingComponent, "Last Reading Component", ,"Provides functionality to read last reading for device", "")
+        Component(automationRuleManagerComponent, "Automation Rule Manager Component", ,"Provides functionality to read/write automation rules for device", "")
+        Component(deviceClaimComponent, "Device Claim Component", ,"Provides functionality to claim unclaimed device", "")
+        Component(deviceAccessManagementComponent, "Device Access Management Component", ,"Allows to read/write list of users with access to device", "")
+
+        Component(deviceConfigurationServiceComponent, "Device Configuration Service Component", ,"API Client", "")
+        Component(deviceMetadataServiceComponent, "Device Metadata Service Component", ,"API Client", "")
+        Component(deviceAccessServiceComponent, "Device Access Service Component", ,"API Client", "")
+        Component(lastReadingServiceComponent, "Last Reading Service Component", ,"API Client", "")
+        Component(automationRuleManagerServiceComponent, "Automation Rule Manager Service Component", ,"API Client", "")
+    }
+    Container(customerGateway, "Customer Gateway", , "End user request gateway with auth check")
+    Container(lastReadingService, "Last Reading Service", , "CRUD Last readings of devices")
+    Container(deviceAccessService, "Device Access Service", ,"Enforces device access control and manages Access Control Lists", "")
+    Container(automationRuleManagerService, "Automation Rule Manager Service",, "Verifies automation rules requests, stores event sourced rules and projection", "")
+    Container(deviceConfigurationService, "Device Configuration Service", ,"Stores device configuration", "")
+    Container(deviceMetadataService, "Device Metadata Service", ,"Stores device metadata", "")
+}
+
+Rel(customerGateway, deviceMetadataApi, "User requests to list available devices, write metadata", "sync")
+Rel(deviceMetadataApi, deviceMetadataComponent, "")
+Rel(deviceMetadataComponent, deviceMetadataServiceComponent, "Delegates metadata operations to Device Metadata Service")
+Rel(deviceMetadataComponent, deviceAccessServiceComponent, "Gets list of devices available for user, checks write access to device metadata")
+Rel(deviceMetadataServiceComponent, deviceMetadataService, "Manages device metadata")
+
+Rel(customerGateway, deviceConfigurationApi, "User requests to read/write configuration", "sync")
+Rel(deviceConfigurationApi, deviceConfigurationComponent, "")
+Rel(deviceConfigurationComponent, deviceConfigurationServiceComponent, "Delegates configuration operations to Device Configuration Service")
+Rel(deviceConfigurationComponent, deviceAccessServiceComponent, "Checks access to device configuration")
+Rel(deviceConfigurationServiceComponent, deviceConfigurationService, "Manages device configuration")
+
+Rel(customerGateway, lastReadingApi, "User requests to read last reading for device", "sync")
+Rel(lastReadingApi, lastReadingComponent, "")
+Rel(lastReadingComponent, deviceAccessServiceComponent, "Checks access to device readings")
+Rel(lastReadingComponent, lastReadingServiceComponent, "Read device last reading")
+Rel(lastReadingServiceComponent, lastReadingService, "Reads last received device readings")
+
+Rel(customerGateway, automationRuleManagerApi, "User requests to read/write automation rules for device", "sync")
+Rel(automationRuleManagerApi, automationRuleManagerComponent, "")
+Rel(automationRuleManagerComponent, deviceAccessServiceComponent, "Checks access to device automation rules")
+Rel(automationRuleManagerComponent, automationRuleManagerServiceComponent, "Reads/Writes device automation rules")
+Rel(automationRuleManagerServiceComponent, automationRuleManagerService, "Manages automation rules")
+
+
+Rel(customerGateway, deviceClaimApi, "User requests to claim device", "sync")
+Rel(deviceClaimApi, deviceClaimComponent, "")
+Rel(deviceClaimComponent, deviceAccessServiceComponent, "Delegates device claiming to Device Access Service")
+Rel(customerGateway, deviceAccessManagementApi, "User requests to read/write access control list", "sync")
+Rel(deviceAccessManagementApi, deviceAccessManagementComponent, "")
+Rel(deviceAccessManagementComponent, deviceAccessServiceComponent, "Checks access to device and reads/writes access control lists")
+Rel(deviceAccessServiceComponent, deviceAccessService, "Assigns device to user and verifies user access to device")
+
+SHOW_LEGEND()
+@enduml

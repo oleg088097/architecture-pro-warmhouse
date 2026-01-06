@@ -32,6 +32,11 @@ func main() {
 	temperatureService := services.NewTemperatureService(temperatureAPIURL)
 	log.Printf("Temperature service initialized with API URL: %s\n", temperatureAPIURL)
 
+	// Initialize device configuration service
+	deviceConfigServiceURL := getEnv("DEVICE_CONFIGURATION_SERVICE_URL", "http://device-configuration-service")
+	configurationService := services.NewConfigurationService(deviceConfigServiceURL)
+	log.Printf("Configuration service initialized with API URL: %s\n", deviceConfigServiceURL)
+
 	// Initialize router
 	router := gin.Default()
 
@@ -46,7 +51,7 @@ func main() {
 	apiRoutes := router.Group("/api/v1")
 
 	// Register sensor routes
-	sensorHandler := handlers.NewSensorHandler(database, temperatureService)
+	sensorHandler := handlers.NewSensorHandler(database, temperatureService, configurationService)
 	sensorHandler.RegisterRoutes(apiRoutes)
 
 	// Start server

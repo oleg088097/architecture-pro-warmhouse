@@ -1,0 +1,44 @@
+@startuml
+!NEW_C4_STYLE=1
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Device Configuration Service Component Diagram
+top to bottom direction
+
+AddRelTag("async", $textColor="$ARROW_FONT_COLOR", $lineColor="$ARROW_COLOR", $lineStyle = DashedLine())
+
+System_Boundary(warmHouseSystem, "WarmHouse System") {
+    Container_Boundary(deviceConfigurationService, "Device Configuration Service") {
+        Component(configurationReadApi, "Configuration Read API", ,"Allows to read device configuration", "")
+        Component(configurationUpdateApi, "Configuration Update API", ,"Allows to send updates for device configuration", "")
+        Component(configurationTopicSubscriber, "Configuration Topic Subscriber", ,"Reads Configuration Topic to process updates from device", "")
+
+        Component(configurationComponent, "Configuration Component", ,"Manages configuration updates, including delivery and resolution", "")
+        Component(configurationOutboxComponent, "Configuration Outbox Component", ,"Provides functionality to deliver update commands to router", "")
+
+        Component(configurationRepository, "Configuration Repository", ,"Repository class for Configuration objects", "")
+    }
+    Container(configurationProcessor, "Configuration Processor","", "Selects and processes configuration from devices (Anti-Corruption Layer)", "")
+    Container(automationRuleEngineService, "Automation Rule Engine Service",, "Executes automation rules", "")
+    Container(userDeviceService, "User Device Service", , "End user interface with access check")
+    Container(deviceCommandRouter, "Device Command Router", "", "Routes communication to devices")
+    ContainerDb(deviceDb, "Device Database",  "SQL Database", "Stores Device domain objects", "")
+}
+Rel(automationRuleEngineService, configurationUpdateApi, "Sends configuration update commands from automation")
+
+Rel(userDeviceService, configurationReadApi, "Reads configuration")
+Rel(userDeviceService, configurationUpdateApi, "Sends configuration update commands from user")
+Rel(configurationReadApi, configurationComponent, "Read configuration")
+Rel(configurationProcessor, configurationTopicSubscriber, "", "Kafka topic", $tags="async")
+Rel(configurationTopicSubscriber, configurationComponent, "Write configuration")
+Rel(configurationComponent, configurationRepository, "")
+
+Rel(configurationTopicSubscriber, configurationOutboxComponent, "Mark pending update ACK on config match")
+Rel(configurationUpdateApi, configurationOutboxComponent, "")
+Rel(configurationOutboxComponent, deviceCommandRouter, "Send configuration to device")
+Rel(configurationOutboxComponent, configurationComponent, "Verify that update is based on the last actual state via last seen version from client")
+
+Rel(configurationRepository, deviceDb, "")
+
+SHOW_LEGEND()
+@enduml

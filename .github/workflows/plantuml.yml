@@ -1,0 +1,37 @@
+name: PlantUML Diagrams
+
+on:
+  push:
+    branches:
+      - main
+      - warmhouse
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  generate-diagrams:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.ACTIONS_PAT }}
+
+      - name: Generate diagrams
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/work \
+            plantuml/plantuml \
+            -tsvg /work/schemas/**
+
+      - name: Commit Diagrams
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add schemas/**/*.svg
+          git add schemas/*.svg
+          git commit -m "Automated diagram generation"
+          git push origin
+        if: success()

@@ -1,0 +1,45 @@
+asyncapi: 3.0.0
+info:
+  title: Device Configuration Service
+  version: 0.0.0
+  description: Device Configuration Service running in Kafka
+channels:
+  warmhouse.ingress.configuration.processed:
+    address: warmhouse.ingress.configuration.processed
+    messages:
+      publish.message:
+        title: Ingress Configuration Processed
+        summary: Ingress configuration transformed by Configuration Processor.
+        name: Order
+        contentType: application/json
+        payload:
+          $ref: '#/components/schemas/Configuration'
+
+operations:
+  warmhouse.ingress.configuration.processed:
+    action: receive
+    channel:
+      $ref: '#/channels/warmhouse.ingress.configuration.processed'
+    messages:
+      - $ref: '#/channels/warmhouse.ingress.configuration.processed/messages/publish.message'
+
+components:
+  schemas:
+    Configuration:
+      type: object
+      properties:
+        deviceId:
+          type: integer
+          format: int64
+          examples: [101]
+        config:
+          type: string
+          examples: ['{"enable": true}']
+        version:
+          type: integer
+          format: int32
+          examples: [1,2]
+        receivedAt:
+          type: integer
+          format: int64
+          examples: [1767621039]

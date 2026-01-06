@@ -1,0 +1,112 @@
+@startuml
+
+title Device Service Outbox Code Diagram
+
+package Infrastructure {
+  class ConfigurationUpdateRepositoryImpl
+  class ConfigurationUpdateOutboxImpl
+}
+
+package ConfigurationComponent {
+    entity Configuration {
+      +Integer deviceId
+      +String config
+      +Integer version
+      +Date receivedAt
+    }
+    interface ConfigurationRepository {
+        +Configuration findByDeviceId(deviceId)
+    }
+}
+
+package ConfigurationOutboxComponent {
+    interface ConfigurationUpdateRepository {
+        +ConfigurationUpdate findActiveForDevice(deviceId)
+        +ConfigurationUpdate[] findTimedOutUpdates()
+        +ConfigurationUpdate save(ConfigurationUpdate)
+    }
+
+    interface ConfigurationUpdateOutboxRepository {
+        +ConfigurationUpdateOutbox save(ConfigurationUpdateEvent)
+        +ConfigurationUpdateOutbox getForAttempt()
+        +ConfigurationUpdateOutbox delete(commandId)
+    }
+
+    entity ConfigurationUpdateOutbox <<Entity>> {
+      +Integer commandId
+      +Integer deviceId
+      +String config
+      +Integer attemptCount
+    }
+
+    record ConfigurationUpdateCommand <<Value Object>> {
+      +Integer deviceId
+      +String config
+      +Integer lastSeenConfigVersion
+    }
+    record ConfigurationUpdateCommandResponse <<Value Object>> {
+      +Integer commandId
+      +Integer deviceId
+      +String config
+    }
+    enum ConfigurationUpdateStatus {
+      PENDING
+      SENT
+      ACK
+      FAILED
+    }
+
+    class ConfigurationUpdateService <<Application Service>> {
+        +ConfigurationUpdateCommandResponse issueUpdateCommand(ConfigurationUpdateCommand)
+        +void matchConfigFromDevice(Configuration)
+        +void applyTimeout()
+    }
+
+    note right of ConfigurationUpdateService
+      Saves ConfigurationUpdate and
+      ConfigurationUpdateOutbox
+      in a single transaction
+    end note
+
+    entity ConfigurationUpdate <<Aggregate Root>> {
+      -Integer commandId
+      -Integer deviceId
+      -String config
+      -Integer persistenceVersion
+      -ConfigurationUpdateStatus status
+      -Date createdAt
+
+      +ConfigurationUpdate constructor(ConfigurationUpdateCommand, Configuration)
+      +ConfigurationUpdateOutbox createUpdateEvent()
+      +ConfigurationUpdateCommandResponse getCommandResponse()
+      +void matchConfigToAck(Configuration)
+      +void checkTimeout()
+    }
+
+    note left of ConfigurationUpdate::constructor
+        Expects Configuration::version to
+        match ConfigurationUpdateCommand::lastSeenConfigVersion. Throws otherwise.
+    end note
+    note left of ConfigurationUpdate::matchConfigToAck
+        Sets status ConfigurationUpdateStatus::ACK on
+        Configuration::config match ConfigurationUpdate::command::config.
+    end note
+    class ConfigurationUpdateOutboxRelay <<Application Service>> {
+        +void sendUpdateEvent(ConfigurationUpdateEvent)
+    }
+}
+
+ConfigurationUpdateOutboxRelay -->  ConfigurationUpdateOutbox
+ConfigurationUpdateOutboxRelay -->  ConfigurationUpdateOutboxRepository
+
+ConfigurationUpdateService -->  ConfigurationRepository
+ConfigurationUpdateService -->  ConfigurationUpdateRepository
+ConfigurationUpdateService -->  ConfigurationUpdateOutboxRepository
+ConfigurationUpdateService -->  ConfigurationUpdate
+
+ConfigurationUpdate ..> ConfigurationUpdateCommand : created from
+
+ConfigurationUpdateRepositoryImpl ..> ConfigurationUpdateRepository
+ConfigurationUpdateOutboxImpl ..> ConfigurationUpdateOutboxRepository
+
+@enduml

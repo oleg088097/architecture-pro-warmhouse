@@ -1,0 +1,159 @@
+@startuml
+
+skinparam linetype ortho
+
+title Warmhouse ER Diagram
+
+' Auth Database
+
+entity User {
+    * user_id : int <<generated>>
+    --
+    * username : text
+    * email : text
+    * password_hash : text
+    * first_name : text
+    * last_name : text
+    * status : text <<ENUM>>
+    * created_at : timestamp
+}
+
+' Device Access Database
+
+entity DeviceAccessType {
+    * access_type_id : int <<generated>>
+    --
+    * name : text
+    * description : text
+}
+
+entity UserDeviceAccess {
+    * user_id : int <<PK>> <<FK>>
+    * device_id : int <<PK>> <<FK>>
+    * access_type_id : int <<PK>> <<FK>>
+    --
+}
+
+' Device Metadata Database
+
+entity DeviceTypeMetadata {
+    * device_type_id : int <<generated>>
+    --
+    * name : text
+    * manufacturer : text
+    * model : text
+    * revision : text
+}
+
+entity DeviceTypeReadingsMetadata {
+    * reading_type_id : int <<generated>>
+    --
+    * device_type_id : int <<FK>>
+    * property : text
+    * name : text
+    * value_type : text <<ENUM>>
+    description : text
+}
+
+entity DeviceMetadata {
+    * device_id : int
+    --
+    * name : text
+    * device_type_id : int <<FK>>
+    * init_at : timestamp
+    * status : text <<ENUM>>
+    location : text
+}
+
+' Device Route Database
+
+entity DeviceRoutingConfig {
+    * device_id : int <<FK>>
+    --
+    * delivery_channel : text <<ENUM>>
+}
+
+
+' Device Configuration Database
+
+entity Configuration {
+    * device_id : int <<FK>>
+    --
+    * config : text
+    * version : int
+    * received_at : timestamp
+}
+
+entity ConfigurationUpdate {
+    * command_id : int <<generated>>
+    --
+    * device_id : int <<FK>>
+    * config : text
+    * persistence_version : int
+    * status : text <<ENUM>>
+    * created_at : timestamp
+}
+
+entity ConfigurationUpdateOutbox {
+    * command_id : int <<FK>>
+    --
+    * device_id : int <<FK>>
+    * attempt_count : int
+    * config : text
+}
+
+' Readings Database
+
+entity Reading {
+    * device_id : int <<FK>>
+    * reading_type_id : int <<FK>>
+    --
+    * value : text
+    * received_at : timestamp
+}
+
+' Automation Rule Database
+
+entity AutomationRuleEvent {
+    * event_id : int
+    --
+    * rule_id : int
+    * device_id : int <<FK>>
+    * created_at : timestamp
+    * command : text
+    * data : json
+}
+
+entity AutomationRuleProjection {
+    * rule_id : int <<FK>>
+    --
+    * last_event_id : int <<FK>>
+    * device_id : int <<FK>>
+    * created_at : timestamp
+    * updated_at : timestamp
+    * rule : text
+    * status : text <<ENUM>>
+}
+
+User ||--o{ UserDeviceAccess
+DeviceAccessType ||--o{ UserDeviceAccess
+DeviceMetadata ||--o{ UserDeviceAccess
+
+DeviceTypeMetadata ||--o{ DeviceTypeReadingsMetadata
+DeviceTypeMetadata ||--o{ DeviceMetadata
+
+DeviceRoutingConfig ||--|| DeviceMetadata
+
+Configuration ||--|| DeviceMetadata
+ConfigurationUpdate ||--|| DeviceMetadata
+ConfigurationUpdateOutbox |o--|| ConfigurationUpdate
+DeviceMetadata ||--o{ ConfigurationUpdateOutbox
+
+DeviceMetadata ||--o{ Reading
+DeviceTypeReadingsMetadata ||--o{ Reading
+
+AutomationRuleProjection ||--|{ AutomationRuleEvent
+DeviceMetadata ||--o{ AutomationRuleProjection
+DeviceMetadata ||--o{ AutomationRuleEvent
+
+@enduml

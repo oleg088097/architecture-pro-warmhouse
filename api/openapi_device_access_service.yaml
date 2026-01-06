@@ -1,0 +1,276 @@
+openapi: 3.1.0
+info:
+  title: Device Access Service
+  version: 0.0.0
+  description: |-
+    Device Configuration Service provides API to check user access to device and manage device Access Control List.
+
+tags:
+  - name: user
+    description: User access to devices
+
+  - name: device
+    description: Device Access Control List management
+
+paths:
+  /users/{userId}/devices/{deviceId}:
+    get:
+      tags:
+        - user
+      summary: Get user permissions for device.
+      description: Returns a list of permissions a user has for specified device.
+      operationId: getUserPermissionsForDevice
+      parameters:
+        - name: deviceId
+          in: path
+          description: ID of device
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: userId
+          in: path
+          description: ID of user
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DevicePermissionsList'
+        '400':
+          description: Invalid ID supplied
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /users/{userId}/devices:
+    get:
+      tags:
+        - user
+      summary: Get list of devices user has permissions for.
+      description: Returns a list of deviceId of devices user userId has permissions for.
+      operationId: getUserDevices
+      parameters:
+        - name: userId
+          in: path
+          description: ID of user
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DevicesList'
+        '400':
+          description: Invalid ID supplied
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /devices/{deviceId}:
+    get:
+      tags:
+        - device
+      summary: Get list of users with access to device.
+      description: Returns a list objects representing users and their respective permissions for device.
+      operationId: getDeviceUsers
+      parameters:
+        - name: deviceId
+          in: path
+          description: ID of device
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsersAccessList'
+        '400':
+          description: Invalid ID supplied
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    put:
+      tags:
+        - device
+      summary: Update list of users with access to device.
+      description: |
+        Replaces the full access control list for the device.
+        Missing users will have their access revoked.
+      operationId: updateDeviceUsers
+      parameters:
+        - name: deviceId
+          in: path
+          description: ID of device
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        description: Updated list of users
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsersAccessList'
+        required:
+          true
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsersAccessList'
+        '400':
+          description: Invalid ID supplied
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /devices/{deviceId}/claim:
+    post:
+      tags:
+        - device
+      summary: Claim device.
+      description: Initialize access to unclaimed device. On success requested user is assigned 'own' permission on device.
+      operationId: claimDevice
+      parameters:
+        - name: deviceId
+          in: path
+          description: ID of device
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        description: Claim request body
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimRequest'
+        required:
+          true
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimResponse'
+        '400':
+          description: Invalid ID supplied
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  schemas:
+    DevicePermissionsList:
+      type: object
+      properties:
+        permissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/DevicePermission'
+
+    DevicesList:
+      type: object
+      properties:
+        deviceIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+            examples: [100000, 101]
+
+    UsersAccessList:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            type: object
+            properties:
+              userId:
+                type: integer
+                format: int64
+                examples: [ 101010101, 12345 ]
+              permissions:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DevicePermission'
+
+    ClaimRequest:
+      type: object
+      properties:
+        userId:
+          type: integer
+          format: int64
+          examples: [ 101010101, 12345 ]
+
+    ClaimResponse:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            type: object
+            properties:
+              userId:
+                type: integer
+                format: int64
+                examples: [ 101010101, 12345 ]
+              permissions:
+                type: array
+                items:
+                  type: string
+                  examples: [ 'own' ]
+
+    DevicePermission:
+      type: string
+      enum:
+        - READ_READINGS
+        - READ_CONFIGURATION
+        - WRITE_CONFIGURATION
+        - MANAGE_ACCESS
+        - OWN
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+      required:
+        - code
+        - message

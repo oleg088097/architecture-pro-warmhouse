@@ -1,0 +1,52 @@
+@startuml
+!NEW_C4_STYLE=1
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Device Access Service Component Diagram
+top to bottom direction
+
+System_Boundary(warmHouseSystem, "WarmHouse System") {
+    Container_Boundary(deviceAccessService, "Device Access Service") {
+        together {
+            Component(userAccessCheckApi, "User Access Check API", ,"Allows to check whether user has access to device", "")
+            Component(userAccessListApi, "User Access List API", ,"Allows to get list of available devices for user", "")
+            Component(deviceAccessManagementApi, "Device Access Management API", ,"Allows to read/write list of users with access to device", "")
+            Component(deviceClaimApi, "Device Claim API", ,"Allows to claim an unclaimed device to initiate access", "")
+        }
+
+        Component(accessReadComponent, "Access Read Component", ,"Provides functionality to read access policies from repository", "")
+        Component(deviceAccessManagementComponent, "Device Access Management Component", ,"Provides functionality to set access policies for claimed devices", "")
+        Component(deviceClaimComponent, "Device Claim Component", ,"Provides functionality to claim unclaimed device", "")
+
+        Component(deviceAccessRepository, "Device Access Repository", ,"Repository class for Device Access domain objects", "")
+        Component(deviceMetadataServiceComponent, "Device Service Component", ,"API Client", "")
+    }
+    Container(userDeviceService, "User Device Service", , "End user interface with access check")
+    Container(deviceMetadataService, "Device Metadata Service", ,"Stores device metadata", "")
+    ContainerDb(deviceAccessDb, "Device Access Database",  "SQL Database", "Stores device Access Control List", "")
+
+}
+Rel(userDeviceService, userAccessCheckApi, "", "sync")
+Rel(userDeviceService, userAccessListApi, "", "sync")
+Rel(userDeviceService, deviceClaimApi, "", "sync")
+Rel(userDeviceService, deviceAccessManagementApi, "", "sync")
+
+Rel(userAccessListApi, accessReadComponent, "")
+Rel(userAccessCheckApi, accessReadComponent, "")
+Rel(deviceAccessManagementApi, accessReadComponent, "")
+Rel(accessReadComponent, deviceAccessRepository, "Reads access mapping user-device")
+
+Rel(deviceAccessManagementApi, deviceAccessManagementComponent, "")
+Rel(deviceAccessManagementComponent, deviceAccessRepository, "Writes access mapping user-device")
+
+Rel(deviceClaimApi, deviceClaimComponent, "")
+Rel(deviceClaimComponent, deviceAccessRepository, "Reads/Writes access mapping user-device")
+Rel(deviceClaimComponent, deviceMetadataServiceComponent, "Verifies device exists")
+
+Rel(deviceAccessRepository, deviceAccessDb, "")
+Rel(deviceMetadataServiceComponent, deviceMetadataService, "", "sync")
+
+' database needs to have table device_id - user_id - access_level
+
+SHOW_LEGEND()
+@enduml
