@@ -19,10 +19,10 @@ System_Boundary(warmHouseSystem, "WarmHouse System") {
         Component(deviceClaimComponent, "Device Claim Component", ,"Provides functionality to claim unclaimed device", "")
 
         Component(deviceAccessRepository, "Device Access Repository", ,"Repository class for Device Access domain objects", "")
-        Component(deviceServiceComponent, "Device Service Component", ,"API Client", "")
+        Component(deviceMetadataServiceComponent, "Device Service Component", ,"API Client", "")
     }
     Container(userDeviceService, "User Device Service", , "End user interface with access check")
-    Container(deviceService, "Device Service", ,"Stores and allows to control device metadata and configuration", "")
+    Container(deviceMetadataService, "Device Metadata Service", ,"Stores device metadata", "")
     ContainerDb(deviceAccessDb, "Device Access Database",  "SQL Database", "Stores device Access Control List", "")
 
 }
@@ -41,10 +41,10 @@ Rel(deviceAccessManagementComponent, deviceAccessRepository, "Writes access mapp
 
 Rel(deviceClaimApi, deviceClaimComponent, "")
 Rel(deviceClaimComponent, deviceAccessRepository, "Reads/Writes access mapping user-device")
-Rel(deviceClaimComponent, deviceServiceComponent, "Verifies device exists")
+Rel(deviceClaimComponent, deviceMetadataServiceComponent, "Verifies device exists")
 
 Rel(deviceAccessRepository, deviceAccessDb, "")
-Rel(deviceServiceComponent, deviceService, "", "sync")
+Rel(deviceMetadataServiceComponent, deviceMetadataService, "", "sync")
 
 ' database needs to have table device_id - user_id - access_level
 
