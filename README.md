@@ -1,14 +1,7 @@
 # Project_template
 
-Это шаблон для решения проектной работы. Структура этого файла повторяет структуру заданий. Заполняйте его по мере работы над решением.
 
 # Задание 1. Анализ и планирование
-
-<aside>
-
-Чтобы составить документ с описанием текущей архитектуры приложения, можно часть информации взять из описания компании и условия задания. Это нормально.
-
-</aside
 
 ### 1. Описание функциональности монолитного приложения
 
@@ -59,40 +52,62 @@
 
 ### 5. Визуализация контекста системы — диаграмма С4
 
-[C4_context](https://disk.yandex.ru/d/J_rWxb29BVD3Bg)
+- /schemas/C4_context.svg
+
+[![svg](/schemas/C4_context.svg)](https://raw.githubusercontent.com/oleg088097/architecture-pro-warmhouse/refs/heads/warmhouse/schemas/C4_context.svg)
 
 # Задание 2. Проектирование микросервисной архитектуры
 
-В этом задании вам нужно предоставить только диаграммы в модели C4. Мы не просим вас отдельно описывать получившиеся микросервисы и то, как вы определили взаимодействия между компонентами To-Be системы. Если вы правильно подготовите диаграммы C4, они и так это покажут.
-
 **Диаграмма контейнеров (Containers)**
 
-Добавьте диаграмму.
+- /schemas/C4_container.svg
+
+  [![svg](/schemas/C4_container.svg)](https://raw.githubusercontent.com/oleg088097/architecture-pro-warmhouse/refs/heads/warmhouse/schemas/C4_container.svg)
 
 **Диаграмма компонентов (Components)**
 
-Добавьте диаграмму для каждого из выделенных микросервисов.
+- /schemas/component/C4_component_user_device_service.svg
+
+[![svg](/schemas/component/C4_component_user_device_service.svg)](https://raw.githubusercontent.com/oleg088097/architecture-pro-warmhouse/refs/heads/warmhouse/schemas/component/C4_component_user_device_service.svg)
+
+- /schemas/component/C4_component_device_configuration_service.svg
+
+[![svg](/schemas/component/C4_component_device_configuration_service.svg)](https://raw.githubusercontent.com/oleg088097/architecture-pro-warmhouse/refs/heads/warmhouse/schemas/component/C4_component_device_configuration_service.svg)
+
+- /schemas/component/C4_component_device_access_service.svg
+
+[![svg](/schemas/component/C4_component_device_access_service.svg)](https://raw.githubusercontent.com/oleg088097/architecture-pro-warmhouse/refs/heads/warmhouse/schemas/component/C4_component_device_access_service.svg)
+
 
 **Диаграмма кода (Code)**
 
-Добавьте одну диаграмму или несколько.
+- /schemas/code/C4_code_device_configuration_service.svg
+
+[![svg](/schemas/code/C4_code_device_configuration_service.svg)](https://raw.githubusercontent.com/oleg088097/architecture-pro-warmhouse/refs/heads/warmhouse/schemas/code/C4_code_device_configuration_service.svg)
+
 
 # Задание 3. Разработка ER-диаграммы
 
-Добавьте сюда ER-диаграмму. Она должна отражать ключевые сущности системы, их атрибуты и тип связей между ними.
+- /schemas/er/C4_er.svg
+
+[![svg](/schemas/er/C4_er.svg)](https://raw.githubusercontent.com/oleg088097/architecture-pro-warmhouse/refs/heads/warmhouse/schemas/er/C4_er.svg)
 
 # Задание 4. Создание и документирование API
 
 ### 1. Тип API
 
-RestAPI для синхронных операция.
-  Синхронные операции в спроектированной архитектуре в основном представлены пользовательским API и сценариями пользователя
-AsyncAPI для асинхронных операций. 
-  Асинхронные операции в спроектированной архитектуре в основном представлены в потоках получения показаний/конфигурации/метаданных от устройств. 
+- RestAPI для синхронных операций.
+  - Синхронные операции в спроектированной архитектуре в основном представлены пользовательским API и сценариями пользователя
+- AsyncAPI для асинхронных операций. 
+  - Асинхронные операции в спроектированной архитектуре в основном представлены в потоках получения показаний/конфигурации/метаданных от устройств. 
 
 ### 2. Документация API
 
-Здесь приложите ссылки на документацию API для микросервисов, которые вы спроектировали в первой части проектной работы. Для документирования используйте Swagger/OpenAPI или AsyncAPI.
+[api/asyncapi_device_configuration_service.yaml](api/asyncapi_device_configuration_service.yaml)
+
+[api/openapi_device_access_service.yaml](api/openapi_device_access_service.yaml)
+
+[api/openapi_device_configuration_service.yaml](api/openapi_device_configuration_service.yaml)
 
 # Задание 5. Работа с docker и docker-compose
 
@@ -152,16 +167,10 @@ Locations - название комнаты, sensorId - идентификато
 
 # **Задание 6. Разработка MVP**
 
-Необходимо создать новые микросервисы и обеспечить их интеграции с существующим монолитом для плавного перехода к микросервисной архитектуре. 
-
-### **Что нужно сделать**
-
-1. Создайте новые микросервисы для управления телеметрией и устройствами (с простейшей логикой), которые будут интегрированы с существующим монолитным приложением. Каждый микросервис на своем ООП языке.
-2. Обеспечьте взаимодействие между микросервисами и монолитом (при желании с помощью брокера сообщений), чтобы постепенно перенести функциональность из монолита в микросервисы. 
-
-В результате у вас должны быть созданы Dockerfiles и docker-compose для запуска микросервисов. 
-
 В спроектированной архитектуре ожидается, что инициализация устройства в системе WarmHouse будет произведена в результате получения сообщений от модуля умного дома.
+
 Источником правды относительно конфигурации модуля умного дома так же является сам модуль и его сообщения в систему WarmHouse.
+
 В соответствие с этим, первоначальная инициализация конфигурации модуля в сервисе device-configuration-service происходит на основании получения сообщения из топика warmhouse.ingress.configuration.processed.
+
 Для работы с сервисом можно напрямую вызвать device-command-router с желаемой конфигурацией. Роутер переправит конфигурацию в соответствующий топик в качестве имитации процесса применения конфигурации в модуле.

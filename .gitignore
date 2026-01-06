@@ -45,6 +45,7 @@ coverage
 # temp directory
 .temp
 .tmp
+__pycache__
 
 # Runtime data
 pids
